@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 export type NodeEnv = 'development' | 'test' | 'production';
 
 export interface AppConfig {
@@ -12,6 +14,10 @@ export interface AppConfig {
   requireAdminApproval: boolean;
   deviceChallengeTtlMinutes: number;
   corsOrigins: string[];
+  fileStorageDir: string;
+  fileEncryptionKeyFile: string;
+  fileEncryptionKek: string | null;
+  maxUploadBytes: number;
 }
 
 function parseBoolean(name: string, value: string | undefined, fallback: boolean): boolean {
@@ -29,6 +35,21 @@ function parsePositiveInt(name: string, value: string | undefined, fallback: num
     throw new Error(`Invalid positive integer for ${name}: ${value}`);
   }
   return parsed;
+}
+
+function parseStorageDir(value: string | undefined): string {
+  const directory = value && value.trim().length > 0 ? value.trim() : path.join(process.cwd(), 'storage');
+  return path.resolve(directory);
+}
+
+function parseOptionalKey(value: string | undefined): string | null {
+  if (value === undefined || value.trim() === '') return null;
+  const normalised = value.trim();
+  const key = Buffer.from(normalised, 'base64');
+  if (key.length !== 32 || key.toString('base64').replace(/=+$/, '') !== normalised.replace(/=+$/, '')) {
+    throw new Error('FILE_ENCRYPTION_KEK must be a Base64-encoded 32-byte key');
+  }
+  return normalised;
 }
 
 function parseTrustProxy(value: string | undefined): boolean | number {
@@ -52,6 +73,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     throw new Error('DATABASE_URL is required');
   }
 
+  const fileStorageDir = parseStorageDir(env.FILE_STORAGE_DIR);
+  const fileEncryptionKeyFile = env.FILE_ENCRYPTION_KEY_FILE
+    ? path.resolve(env.FILE_ENCRYPTION_KEY_FILE)
+    : path.join(fileStorageDir, '.master-key');
+
   return {
     env: nodeEnv,
     port: parsePositiveInt('PORT', env.PORT, 3000),
@@ -71,5 +97,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       .split(',')
       .map((origin) => origin.trim())
       .filter((origin) => origin.length > 0),
+    fileStorageDir,
+    fileEncryptionKeyFile,
+    fileEncryptionKek: parseOptionalKey(env.FILE_ENCRYPTION_KEK),
+    maxUploadBytes: parsePositiveInt(
+      'FILE_MAX_UPLOAD_BYTES',
+      env.FILE_MAX_UPLOAD_BYTES,
+      25 * 1024 * 1024,
+    ),
   };
 }

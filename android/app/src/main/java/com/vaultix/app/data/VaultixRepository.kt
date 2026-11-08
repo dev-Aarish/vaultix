@@ -76,6 +76,14 @@ class VaultixRepository(
         ).data.device
     }
 
+    suspend fun browse(folderId: String?): Result<BrowseData> = authorized { authorization ->
+        api.browse(authorization, folderId).data
+    }
+
+    suspend fun fileMetadata(fileId: String): Result<FileMetadataData> = authorized { authorization ->
+        api.fileMetadata(authorization, fileId).data
+    }
+
     private suspend fun <T> authorized(block: suspend (String) -> T): Result<T> {
         val token = sessionStore.token
             ?: return Result.failure(

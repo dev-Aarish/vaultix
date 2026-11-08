@@ -6,7 +6,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vaultix.app.data.ApiClientFactory
 import com.vaultix.app.data.ApiException
+import com.vaultix.app.data.BrowseData
 import com.vaultix.app.data.DeviceDto
+import com.vaultix.app.data.FileMetadataData
 import com.vaultix.app.data.PublicUser
 import com.vaultix.app.data.SessionStore
 import com.vaultix.app.data.VaultixRepository
@@ -33,6 +35,9 @@ data class AppUiState(
     val user: PublicUser? = null,
     val devices: List<DeviceDto> = emptyList(),
     val boundDevice: DeviceDto? = null,
+    val browse: BrowseData? = null,
+    val browserLoading: Boolean = false,
+    val selectedFile: FileMetadataData? = null,
     val busy: Boolean = false,
     val error: String? = null,
     val info: String? = null,
@@ -87,7 +92,11 @@ class VaultixViewModel(application: Application) : AndroidViewModel(application)
         }
 
         when {
-            boundDevice != null -> _state.update { it.copy(stage = Stage.HOME) }
+            boundDevice != null -> {
+                _state.update { it.copy(stage = Stage.HOME) }
+                loadFilesInternal(null)
+            }
+
             activeDevice == null -> _state.update { it.copy(stage = Stage.DEVICE_SETUP) }
             activeDevice.status == "REVOKED" -> _state.update { it.copy(stage = Stage.DEVICE_REVOKED) }
             activeDevice.status == "PENDING" -> _state.update { it.copy(stage = Stage.DEVICE_PENDING) }
@@ -109,6 +118,7 @@ class VaultixViewModel(application: Application) : AndroidViewModel(application)
                         info = null,
                     )
                 }
+                loadFilesInternal(null)
             },
             onFailure = { failure ->
                 when ((failure as? ApiException)?.code) {
@@ -215,6 +225,58 @@ class VaultixViewModel(application: Application) : AndroidViewModel(application)
                 else -> _state.update { it.copy(stage = Stage.DEVICE_PENDING) }
             }
         }
+    }
+
+    fun refreshFiles() {
+        val folderId = _state.value.browse?.folder?.id
+        viewModelScope.launch { loadFilesInternal(folderId) }
+    }
+
+    fun openFolder(folderId: String) {
+        viewModelScope.launch { loadFilesInternal(folderId) }
+    }
+
+    fun goUp() {
+        val breadcrumbs = _state.value.browse?.breadcrumbs ?: return
+        val parentFolderId = if (breadcrumbs.size <= 1) {
+            null
+        } else {
+            breadcrumbs[breadcrumbs.size - 2].id
+        }
+        viewModelScope.launch { loadFilesInternal(parentFolderId) }
+    }
+
+    fun openFile(fileId: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(error = null) }
+            repository.fileMetadata(fileId).fold(
+                onSuccess = { metadata ->
+                    _state.update { it.copy(selectedFile = metadata) }
+                },
+                onFailure = { failure -> handleFailure(failure) },
+            )
+        }
+    }
+
+    fun dismissFile() {
+        _state.update { it.copy(selectedFile = null) }
+    }
+
+    fun clearError() {
+        _state.update { it.copy(error = null) }
+    }
+
+    private suspend fun loadFilesInternal(folderId: String?) {
+        _state.update { it.copy(browserLoading = true, error = null) }
+        repository.browse(folderId).fold(
+            onSuccess = { data ->
+                _state.update { it.copy(browse = data, browserLoading = false) }
+            },
+            onFailure = { failure ->
+                _state.update { it.copy(browserLoading = false) }
+                handleFailure(failure)
+            },
+        )
     }
 
     fun logout() {

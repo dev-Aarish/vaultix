@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -68,7 +69,16 @@ fun VaultixApp(viewModel: VaultixViewModel) {
                     state = state,
                     onLogout = viewModel::logout,
                 )
-                Stage.HOME -> HomeScreen(state = state, onLogout = viewModel::logout)
+                Stage.HOME -> HomeScreen(
+                    state = state,
+                    onLogout = viewModel::logout,
+                    onOpenFolder = viewModel::openFolder,
+                    onOpenFile = viewModel::openFile,
+                    onGoUp = viewModel::goUp,
+                    onRefresh = viewModel::refreshFiles,
+                    onClearError = viewModel::clearError,
+                    onDismissFile = viewModel::dismissFile,
+                )
                 Stage.DEVICE_REVOKED -> DeviceRevokedScreen(
                     state = state,
                     onLogout = viewModel::logout,
@@ -395,8 +405,22 @@ private fun DeviceActivatingScreen(state: AppUiState, onLogout: () -> Unit) {
 }
 
 @Composable
-private fun HomeScreen(state: AppUiState, onLogout: () -> Unit) {
-    ScreenFrame {
+private fun HomeScreen(
+    state: AppUiState,
+    onLogout: () -> Unit,
+    onOpenFolder: (String) -> Unit,
+    onOpenFile: (String) -> Unit,
+    onGoUp: () -> Unit,
+    onRefresh: () -> Unit,
+    onClearError: () -> Unit,
+    onDismissFile: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .safeDrawingPadding()
+            .padding(horizontal = 20.dp, vertical = 20.dp),
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -416,49 +440,16 @@ private fun HomeScreen(state: AppUiState, onLogout: () -> Unit) {
                 )
             }
         }
-        Spacer(Modifier.height(28.dp))
-        StatusPill(
-            label = "SECURE SESSION",
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        )
-        Spacer(Modifier.height(16.dp))
-        Text(
-            "You're signed in",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "Your account and this device are verified. File sharing arrives in the next phase.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Spacer(Modifier.height(24.dp))
-        Panel {
+        Spacer(Modifier.height(22.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "ACCOUNT",
-                style = MaterialTheme.typography.labelSmall,
+                "Shared files",
+                style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
-                letterSpacing = 1.sp,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.onBackground,
             )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                state.user?.name.orEmpty(),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                state.user?.email.orEmpty(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Spacer(Modifier.weight(1f))
             if (state.user?.role == "ADMIN") {
-                Spacer(Modifier.height(12.dp))
                 StatusPill(
                     label = "ADMIN",
                     containerColor = MaterialTheme.colorScheme.tertiaryContainer,
@@ -466,8 +457,35 @@ private fun HomeScreen(state: AppUiState, onLogout: () -> Unit) {
                 )
             }
         }
-        Spacer(Modifier.height(16.dp))
-        DeviceCard(state.boundDevice, bound = true)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = buildString {
+                append("Signed in as ")
+                append(state.user?.name.orEmpty())
+                append(" · ")
+                append(state.boundDevice?.deviceName ?: "Approved device")
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(14.dp))
+        FileBrowserContent(
+            state = state,
+            onOpenFolder = onOpenFolder,
+            onOpenFile = onOpenFile,
+            onGoUp = onGoUp,
+            onRefresh = onRefresh,
+            onClearError = onClearError,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+        )
+    }
+
+    state.selectedFile?.let { metadata ->
+        FileDetailsDialog(metadata = metadata, onDismiss = onDismissFile)
     }
 }
 

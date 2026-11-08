@@ -1,4 +1,6 @@
 import { generateKeyPairSync, sign, type KeyObject } from 'node:crypto';
+import { rm } from 'node:fs/promises';
+import path from 'node:path';
 import type { Express } from 'express';
 import type { Pool } from 'pg';
 import request, { type Response as SupertestResponse } from 'supertest';
@@ -34,7 +36,11 @@ export function useTestHarness(): TestHarness {
   });
 
   beforeEach(async () => {
-    await pool.query('TRUNCATE audit_events, sessions, invitations, users CASCADE');
+    await pool.query(
+      `TRUNCATE audit_events, permissions, files, folders, device_challenges, devices,
+       sessions, invitations, users CASCADE`,
+    );
+    await rm(path.join(config.fileStorageDir, 'objects'), { recursive: true, force: true });
   });
 
   afterAll(async () => {
@@ -213,4 +219,137 @@ export async function approveDevice(
   return request(app)
     .post(`/admin/devices/${deviceId}/approve`)
     .set('Authorization', bearer(adminToken));
+}
+
+export interface ApprovedDevice {
+  deviceId: string;
+  key: TestDeviceKey;
+}
+
+export async function registerApprovedDevice(
+  app: Express,
+  userToken: string,
+  adminToken: string,
+  deviceName = 'Bound Test Device',
+  key: TestDeviceKey = createDeviceKey(),
+): Promise<ApprovedDevice> {
+  const registered = await registerDevice(app, userToken, deviceName, key);
+  const proof = await verifyDevice(
+    app,
+    userToken,
+    registered.device.id,
+    registered.challenge,
+    key,
+  );
+  if (proof.status !== 200) {
+    throw new Error(`Device proof failed: ${proof.status} ${JSON.stringify(proof.body)}`);
+  }
+  const approval = await approveDevice(app, adminToken, registered.device.id);
+  if (approval.status !== 200) {
+    throw new Error(`Device approval failed: ${approval.status} ${JSON.stringify(approval.body)}`);
+  }
+  return { deviceId: registered.device.id, key };
+}
+
+export async function bindDevice(
+  app: Express,
+  userToken: string,
+  device: ApprovedDevice,
+): Promise<void> {
+  const challengeResponse = await request(app)
+    .post('/devices/challenge')
+    .set('Authorization', bearer(userToken))
+    .send({ deviceId: device.deviceId, purpose: 'SESSION' });
+  if (challengeResponse.status !== 200) {
+    throw new Error(
+      `Session challenge failed: ${challengeResponse.status} ${JSON.stringify(challengeResponse.body)}`,
+    );
+  }
+  const bound = await verifyDevice(
+    app,
+    userToken,
+    device.deviceId,
+    challengeResponse.body.data.challenge,
+    device.key,
+  );
+  if (bound.status !== 200) {
+    throw new Error(`Session binding failed: ${bound.status} ${JSON.stringify(bound.body)}`);
+  }
+}
+
+export async function createBoundUser(
+  harness: TestHarness,
+  adminToken: string,
+  email: string,
+  password = USER_PASSWORD,
+): Promise<ActiveUser & ApprovedDevice> {
+  const active = await createActiveUser(harness, adminToken, email, password);
+  const device = await registerApprovedDevice(harness.app, active.token, adminToken);
+  await bindDevice(harness.app, active.token, device);
+  return { ...active, ...device };
+}
+
+export async function createFolder(
+  app: Express,
+  adminToken: string,
+  name: string,
+  parentFolderId?: string,
+): Promise<{ id: string; name: string; parentFolderId: string | null }> {
+  const response = await request(app)
+    .post('/admin/folders')
+    .set('Authorization', bearer(adminToken))
+    .send({ name, parentFolderId });
+  if (response.status !== 201) {
+    throw new Error(`Folder creation failed: ${response.status} ${JSON.stringify(response.body)}`);
+  }
+  return response.body.data.folder;
+}
+
+export async function uploadFile(
+  app: Express,
+  adminToken: string,
+  input: {
+    name: string;
+    data: Buffer | string;
+    folderId?: string;
+    mimeType?: string;
+  },
+): Promise<{ id: string; name: string; folderId: string | null; sizeBytes: number }> {
+  const response = await request(app)
+    .post('/admin/files')
+    .query({
+      name: input.name,
+      folderId: input.folderId,
+      mimeType: input.mimeType ?? 'application/octet-stream',
+    })
+    .set('Authorization', bearer(adminToken))
+    .set('Content-Type', 'application/octet-stream')
+    .send(Buffer.isBuffer(input.data) ? input.data : Buffer.from(input.data));
+  if (response.status !== 201) {
+    throw new Error(`Upload failed: ${response.status} ${JSON.stringify(response.body)}`);
+  }
+  return response.body.data.file;
+}
+
+export async function grantPermission(
+  app: Express,
+  adminToken: string,
+  input: {
+    subjectType: 'USER' | 'DEVICE';
+    subjectId: string;
+    resourceType: 'FILE' | 'FOLDER';
+    resourceId: string;
+    actions: Array<'VIEW' | 'DOWNLOAD' | 'EDIT'>;
+    deviceIds?: string[] | null;
+    expiresAt?: string | null;
+  },
+): Promise<{ id: string; actions: string[]; deviceIds: string[] | null }> {
+  const response = await request(app)
+    .post('/admin/permissions')
+    .set('Authorization', bearer(adminToken))
+    .send(input);
+  if (response.status !== 201) {
+    throw new Error(`Grant failed: ${response.status} ${JSON.stringify(response.body)}`);
+  }
+  return response.body.data.permission;
 }

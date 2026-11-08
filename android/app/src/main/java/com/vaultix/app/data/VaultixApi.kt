@@ -5,6 +5,8 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface VaultixApi {
     @POST("auth/register")
@@ -39,4 +41,16 @@ interface VaultixApi {
         @Header("Authorization") authorization: String,
         @Body request: VerifyRequest,
     ): VerifyResponse
+
+    @GET("files")
+    suspend fun browse(
+        @Header("Authorization") authorization: String,
+        @Query("folderId") folderId: String?,
+    ): BrowseResponse
+
+    @GET("files/{id}/metadata")
+    suspend fun fileMetadata(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
+    ): FileMetadataResponse
 }

@@ -57,3 +57,53 @@ data class ChallengeResponse(val data: ChallengeData)
 data class VerifyRequest(val deviceId: String, val challengeId: String, val signature: String)
 data class VerifyData(val device: DeviceDto, val deviceBound: Boolean? = null)
 data class VerifyResponse(val data: VerifyData)
+
+data class FolderDto(
+    val id: String = "",
+    val parentFolderId: String? = null,
+    val name: String = "",
+    val status: String = "ACTIVE",
+    val createdAt: String = "",
+    val updatedAt: String = "",
+)
+
+data class FileDto(
+    val id: String = "",
+    val folderId: String? = null,
+    val name: String = "",
+    val mimeType: String = "application/octet-stream",
+    val sizeBytes: Long = 0,
+    val checksum: String = "",
+    val status: String = "ACTIVE",
+    val createdAt: String = "",
+    val updatedAt: String = "",
+)
+
+data class BrowseItemDto(
+    val type: String = "FILE",
+    val id: String = "",
+    val name: String = "",
+    val parentFolderId: String? = null,
+    val folderId: String? = null,
+    val mimeType: String? = null,
+    val sizeBytes: Long? = null,
+    val createdAt: String = "",
+    val updatedAt: String = "",
+    val allowedActions: List<String> = emptyList(),
+)
+
+data class BrowseData(
+    val folder: FolderDto? = null,
+    val breadcrumbs: List<FolderDto> = emptyList(),
+    val items: List<BrowseItemDto> = emptyList(),
+)
+
+data class BrowseResponse(val data: BrowseData)
+
+data class FileMetadataData(
+    val file: FileDto,
+    val breadcrumbs: List<FolderDto> = emptyList(),
+    val allowedActions: List<String> = emptyList(),
+)
+
+data class FileMetadataResponse(val data: FileMetadataData)

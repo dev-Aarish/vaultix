@@ -1,4 +1,6 @@
 import 'dotenv/config';
+import os from 'node:os';
+import path from 'node:path';
 
 const testDatabaseUrl =
   process.env.TEST_DATABASE_URL ?? 'postgresql://localhost:5432/vaultix_test';
@@ -11,3 +13,6 @@ process.env.INVITATION_TTL_HOURS = '72';
 process.env.PASSWORD_MIN_LENGTH = '12';
 process.env.REQUIRE_ADMIN_APPROVAL = 'true';
 process.env.TRUST_PROXY = 'false';
+process.env.FILE_STORAGE_DIR =
+  process.env.TEST_FILE_STORAGE_DIR ??
+  path.join(os.tmpdir(), `vaultix-test-storage-${process.pid}`);
