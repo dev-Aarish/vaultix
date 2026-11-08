@@ -34,6 +34,12 @@ async function expectAccessDenied(fileId: string, token: string): Promise<void> 
   expect(metadata.status).toBe(404);
   expect(metadata.body.error.code).toBe('NOT_FOUND');
 
+  const open = await request(app)
+    .post(`/files/${fileId}/open`)
+    .set('Authorization', bearer(token));
+  expect(open.status).toBe(404);
+  expect(open.body.error.code).toBe('NOT_FOUND');
+
   const content = await request(app)
     .get(`/files/${fileId}/content`)
     .set('Authorization', bearer(token));
@@ -99,6 +105,32 @@ describe('encrypted file storage', () => {
       [file.id],
     );
     expect(audit.rows[0]).toMatchObject({ result: 'SUCCESS', resource_id: file.id });
+
+    const open = await request(app)
+      .post(`/files/${file.id}/open`)
+      .set('Authorization', bearer(token));
+    expect(open.status).toBe(200);
+    expect(open.body.data).toMatchObject({
+      viewSessionId: expect.any(String),
+      file: { id: file.id, name: 'contract.pdf' },
+      watermark: {
+        userName: expect.any(String),
+        userEmail: 'reader@example.com',
+        deviceName: expect.any(String),
+        deviceFingerprint: expect.any(String),
+        classification: 'CONFIDENTIAL • RESTRICTED',
+        timestamp: expect.any(String),
+      },
+      inactivityTimeoutSeconds: 60,
+    });
+
+    const openAudit = await pool.query(
+      `SELECT result, resource_id, metadata FROM audit_events
+       WHERE event_type = 'FILE_ACCESS' AND resource_id = $1 AND metadata->>'operation' = 'OPEN'
+       ORDER BY created_at DESC LIMIT 1`,
+      [file.id],
+    );
+    expect(openAudit.rows[0]).toMatchObject({ result: 'SUCCESS', resource_id: file.id });
   });
 });
 

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import { z } from 'zod';
 import type { AppContext } from '../context';
@@ -185,6 +186,68 @@ export function fileRouter(ctx: AppContext): Router {
         file: toPublicFile(file),
         breadcrumbs: (await breadcrumbsFor(ctx, file)).map(toPublicFolder),
         allowedActions: allowedActions(decision),
+      },
+    });
+  });
+
+  router.post('/:id/open', async (req, res) => {
+    const id = parse(idSchema, req.params.id);
+    const auth = getAuth(req);
+    const deviceId = auth.session.device_id;
+
+    const file = await ctx.files.findById(id);
+    if (!file || file.status !== 'ACTIVE') throw notFound('File not found');
+
+    const parentChain = await parentChainFor(ctx, file);
+    const decisions = await ctx.authorization.loadDecisions(auth.user.id, deviceId);
+    const decision = ctx.authorization.resolve(decisions, fileChain(file, parentChain), deviceId);
+    if (!allows(decision, ['VIEW'])) {
+      await ctx.audit.record({
+        actorUserId: auth.user.id,
+        deviceId,
+        eventType: 'FILE_ACCESS',
+        result: 'DENIED',
+        reasonCode: decision.reason ?? 'NO_PERMISSION',
+        resourceType: 'FILE',
+        resourceId: file.id,
+        ipAddress: getClientIp(req),
+        metadata: { operation: 'OPEN' },
+      });
+      throw notFound('File not found');
+    }
+
+    const device = deviceId ? await ctx.devices.findById(deviceId) : null;
+    const shortFingerprint = device?.key_fingerprint
+      ? (device.key_fingerprint.length <= 16
+          ? device.key_fingerprint
+          : `${device.key_fingerprint.slice(0, 16)}...`)
+      : 'DEVICE-BOUND';
+
+    await ctx.audit.record({
+      actorUserId: auth.user.id,
+      deviceId,
+      eventType: 'FILE_ACCESS',
+      result: 'SUCCESS',
+      resourceType: 'FILE',
+      resourceId: file.id,
+      ipAddress: getClientIp(req),
+      metadata: { operation: 'OPEN', mimeType: file.mime_type, sizeBytes: file.size_bytes },
+    });
+
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      data: {
+        viewSessionId: randomUUID(),
+        file: toPublicFile(file),
+        watermark: {
+          userName: auth.user.name,
+          userEmail: auth.user.email,
+          deviceName: device?.device_name ?? 'Approved Android device',
+          deviceFingerprint: shortFingerprint,
+          classification: 'CONFIDENTIAL • RESTRICTED',
+          timestamp: new Date().toISOString(),
+        },
+        inactivityTimeoutSeconds: 60,
       },
     });
   });

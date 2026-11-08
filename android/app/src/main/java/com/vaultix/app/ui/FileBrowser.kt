@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -233,11 +234,46 @@ private fun EmptyBrowser() {
 }
 
 @Composable
-fun FileDetailsDialog(metadata: FileMetadataData, onDismiss: () -> Unit) {
+fun FileDetailsDialog(
+    metadata: FileMetadataData,
+    busy: Boolean,
+    onViewSecurely: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val isPdf = metadata.file.mimeType == "application/pdf" ||
+        metadata.file.name.endsWith(".pdf", ignoreCase = true)
+    val canView = metadata.allowedActions.contains("VIEW")
+
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!busy) onDismiss() },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            if (canView && isPdf) {
+                Button(
+                    onClick = { onViewSecurely(metadata.file.id) },
+                    enabled = !busy,
+                ) {
+                    if (busy) {
+                        CircularProgressIndicator(
+                            modifier = androidx.compose.ui.Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    } else {
+                        Text("View securely")
+                    }
+                }
+            } else {
+                TextButton(onClick = onDismiss, enabled = !busy) {
+                    Text("Close")
+                }
+            }
+        },
+        dismissButton = {
+            if (canView && isPdf) {
+                TextButton(onClick = onDismiss, enabled = !busy) {
+                    Text("Cancel")
+                }
+            }
         },
         title = {
             Text(
@@ -260,7 +296,11 @@ fun FileDetailsDialog(metadata: FileMetadataData, onDismiss: () -> Unit) {
                     metadata.breadcrumbs.joinToString(" / ") { it.name }.ifBlank { "All files" },
                 )
                 Text(
-                    text = "Secure in-app viewing and watermarking arrive with the protected viewer.",
+                    text = when {
+                        !isPdf -> "Only PDF documents are supported in view-only mode at this time."
+                        !canView -> "You do not have permission to view this file."
+                        else -> "Protected viewer applies screenshot blocking (FLAG_SECURE), dynamic user watermarking, and inactivity lock."
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

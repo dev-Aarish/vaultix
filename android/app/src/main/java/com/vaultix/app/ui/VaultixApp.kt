@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vaultix.app.data.DeviceDto
+import com.vaultix.app.viewer.SecurePdfViewerScreen
 import kotlinx.coroutines.delay
 
 @Composable
@@ -74,11 +75,27 @@ fun VaultixApp(viewModel: VaultixViewModel) {
                     onLogout = viewModel::logout,
                     onOpenFolder = viewModel::openFolder,
                     onOpenFile = viewModel::openFile,
+                    onViewSecurely = viewModel::openSecureViewer,
                     onGoUp = viewModel::goUp,
                     onRefresh = viewModel::refreshFiles,
                     onClearError = viewModel::clearError,
                     onDismissFile = viewModel::dismissFile,
                 )
+                Stage.VIEWING_DOCUMENT -> {
+                    state.viewSession?.let { sessionData ->
+                        SecurePdfViewerScreen(
+                            user = state.user,
+                            sessionData = sessionData,
+                            documentManager = viewModel.documentManager,
+                            isLocked = state.viewerLocked,
+                            reauthBusy = state.reauthBusy,
+                            reauthError = state.reauthError,
+                            onLock = viewModel::lockViewer,
+                            onUnlock = viewModel::unlockViewer,
+                            onClose = viewModel::closeSecureViewer,
+                        )
+                    } ?: LoadingScreen()
+                }
                 Stage.DEVICE_REVOKED -> DeviceRevokedScreen(
                     state = state,
                     onLogout = viewModel::logout,
@@ -410,6 +427,7 @@ private fun HomeScreen(
     onLogout: () -> Unit,
     onOpenFolder: (String) -> Unit,
     onOpenFile: (String) -> Unit,
+    onViewSecurely: (String) -> Unit,
     onGoUp: () -> Unit,
     onRefresh: () -> Unit,
     onClearError: () -> Unit,
@@ -485,7 +503,12 @@ private fun HomeScreen(
     }
 
     state.selectedFile?.let { metadata ->
-        FileDetailsDialog(metadata = metadata, onDismiss = onDismissFile)
+        FileDetailsDialog(
+            metadata = metadata,
+            busy = state.busy,
+            onViewSecurely = onViewSecurely,
+            onDismiss = onDismissFile,
+        )
     }
 }
 

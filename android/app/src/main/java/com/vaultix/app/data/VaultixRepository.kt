@@ -84,6 +84,40 @@ class VaultixRepository(
         api.fileMetadata(authorization, fileId).data
     }
 
+    suspend fun openViewingSession(fileId: String): Result<ViewSessionData> = authorized { authorization ->
+        api.openViewingSession(authorization, fileId).data
+    }
+
+    suspend fun downloadToPrivateTempFile(fileId: String, destination: java.io.File): Result<Unit> =
+        authorized { authorization ->
+            val body = api.fileContent(authorization, fileId)
+            body.byteStream().use { input ->
+                destination.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+        }
+
+    fun wipeFile(file: java.io.File?) {
+        if (file == null || !file.exists()) return
+        runCatching {
+            val length = file.length()
+            if (length > 0) {
+                file.outputStream().use { output ->
+                    val zeroBuf = ByteArray(8192)
+                    var remaining = length
+                    while (remaining > 0) {
+                        val toWrite = minOf(remaining, zeroBuf.size.toLong()).toInt()
+                        output.write(zeroBuf, 0, toWrite)
+                        remaining -= toWrite
+                    }
+                    output.flush()
+                }
+            }
+            file.delete()
+        }
+    }
+
     private suspend fun <T> authorized(block: suspend (String) -> T): Result<T> {
         val token = sessionStore.token
             ?: return Result.failure(

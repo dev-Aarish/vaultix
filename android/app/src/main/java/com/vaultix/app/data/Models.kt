@@ -107,3 +107,21 @@ data class FileMetadataData(
 )
 
 data class FileMetadataResponse(val data: FileMetadataData)
+
+data class WatermarkDto(
+    val userName: String = "",
+    val userEmail: String = "",
+    val deviceName: String = "",
+    val deviceFingerprint: String = "",
+    val classification: String = "CONFIDENTIAL • RESTRICTED",
+    val timestamp: String = "",
+)
+
+data class ViewSessionData(
+    val viewSessionId: String = "",
+    val file: FileDto = FileDto(),
+    val watermark: WatermarkDto = WatermarkDto(),
+    val inactivityTimeoutSeconds: Long = 60,
+)
+
+data class OpenViewSessionResponse(val data: ViewSessionData)

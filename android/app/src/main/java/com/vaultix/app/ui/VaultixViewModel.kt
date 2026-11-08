@@ -12,12 +12,16 @@ import com.vaultix.app.data.FileMetadataData
 import com.vaultix.app.data.PublicUser
 import com.vaultix.app.data.SessionStore
 import com.vaultix.app.data.VaultixRepository
+import com.vaultix.app.data.ViewSessionData
 import com.vaultix.app.security.DeviceKeyManager
+import com.vaultix.app.viewer.PdfDocumentManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
+import java.util.UUID
 
 enum class Stage {
     LOADING,
@@ -27,6 +31,7 @@ enum class Stage {
     DEVICE_PENDING,
     DEVICE_ACTIVATING,
     HOME,
+    VIEWING_DOCUMENT,
     DEVICE_REVOKED,
 }
 
@@ -38,6 +43,10 @@ data class AppUiState(
     val browse: BrowseData? = null,
     val browserLoading: Boolean = false,
     val selectedFile: FileMetadataData? = null,
+    val viewSession: ViewSessionData? = null,
+    val viewerLocked: Boolean = false,
+    val reauthBusy: Boolean = false,
+    val reauthError: String? = null,
     val busy: Boolean = false,
     val error: String? = null,
     val info: String? = null,
@@ -49,6 +58,13 @@ class VaultixViewModel(application: Application) : AndroidViewModel(application)
         deviceKeys = DeviceKeyManager(),
         sessionStore = SessionStore(application),
     )
+
+    val documentManager = PdfDocumentManager()
+
+    override fun onCleared() {
+        super.onCleared()
+        documentManager.close()
+    }
 
     private val _state = MutableStateFlow(AppUiState())
     val state: StateFlow<AppUiState> = _state.asStateFlow()
@@ -258,6 +274,103 @@ class VaultixViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun openSecureViewer(fileId: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(busy = true, error = null) }
+            repository.openViewingSession(fileId).fold(
+                onSuccess = { sessionData ->
+                    val tempFile = File(
+                        getApplication<Application>().cacheDir,
+                        "vaultix_view_${UUID.randomUUID().toString().take(8)}.pdf",
+                    )
+                    tempFile.deleteOnExit()
+                    repository.downloadToPrivateTempFile(fileId, tempFile).fold(
+                        onSuccess = {
+                            try {
+                                documentManager.open(tempFile)
+                                _state.update {
+                                    it.copy(
+                                        stage = Stage.VIEWING_DOCUMENT,
+                                        viewSession = sessionData,
+                                        selectedFile = null,
+                                        viewerLocked = false,
+                                        reauthBusy = false,
+                                        reauthError = null,
+                                        busy = false,
+                                    )
+                                }
+                            } catch (e: Exception) {
+                                documentManager.close()
+                                repository.wipeFile(tempFile)
+                                _state.update {
+                                    it.copy(
+                                        busy = false,
+                                        error = "Unable to render PDF document: ${e.message}",
+                                    )
+                                }
+                            }
+                        },
+                        onFailure = { failure ->
+                            repository.wipeFile(tempFile)
+                            handleFailure(failure)
+                        },
+                    )
+                },
+                onFailure = { failure ->
+                    handleFailure(failure)
+                },
+            )
+        }
+    }
+
+    fun lockViewer() {
+        _state.update { it.copy(viewerLocked = true, reauthError = null) }
+    }
+
+    fun unlockViewer(password: String) {
+        val userEmail = _state.value.user?.email ?: return
+        viewModelScope.launch {
+            _state.update { it.copy(reauthBusy = true, reauthError = null) }
+            repository.login(userEmail, password).fold(
+                onSuccess = {
+                    _state.update {
+                        it.copy(
+                            viewerLocked = false,
+                            reauthBusy = false,
+                            reauthError = null,
+                        )
+                    }
+                },
+                onFailure = { failure ->
+                    val message = if ((failure as? ApiException)?.code == "INVALID_CREDENTIALS") {
+                        "Incorrect password. Please try again."
+                    } else {
+                        (failure as? ApiException)?.message ?: "Reauthentication failed."
+                    }
+                    _state.update {
+                        it.copy(
+                            reauthBusy = false,
+                            reauthError = message,
+                        )
+                    }
+                },
+            )
+        }
+    }
+
+    fun closeSecureViewer() {
+        documentManager.close()
+        _state.update {
+            it.copy(
+                stage = Stage.HOME,
+                viewSession = null,
+                viewerLocked = false,
+                reauthBusy = false,
+                reauthError = null,
+            )
+        }
+    }
+
     fun dismissFile() {
         _state.update { it.copy(selectedFile = null) }
     }
@@ -281,6 +394,7 @@ class VaultixViewModel(application: Application) : AndroidViewModel(application)
 
     fun logout() {
         viewModelScope.launch {
+            documentManager.close()
             _state.update { it.copy(busy = true) }
             repository.logout()
             _state.value = AppUiState(stage = Stage.LOGIN)
