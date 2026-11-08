@@ -51,6 +51,15 @@ const auditListSchema = z.object({
 
 const idSchema = z.uuid();
 
+const revokeSessionsBodySchema = z
+  .strictObject({
+    userId: z.uuid().optional(),
+    sessionId: z.uuid().optional(),
+  })
+  .refine((data) => data.userId !== undefined || data.sessionId !== undefined, {
+    message: 'Either userId or sessionId must be provided',
+  });
+
 export function adminRouter(ctx: AppContext): Router {
   const router = Router();
   router.use(requireAuth(ctx), requireAdmin(ctx));
@@ -218,6 +227,50 @@ export function adminRouter(ctx: AppContext): Router {
     });
 
     res.json({ data: { revokedSessions } });
+  });
+
+  router.post('/sessions/revoke', async (req, res) => {
+    const body = parseBody(revokeSessionsBodySchema, req);
+    let revokedCount = 0;
+
+    if (body.sessionId) {
+      const success = await ctx.sessions.revoke(body.sessionId);
+      if (success) revokedCount = 1;
+    } else if (body.userId) {
+      revokedCount = await ctx.sessions.revokeAllForUser(body.userId);
+    }
+
+    await ctx.audit.record({
+      actorUserId: getAuth(req).user.id,
+      eventType: 'ADMIN_SESSIONS_REVOKE',
+      result: 'SUCCESS',
+      resourceType: body.sessionId ? 'SESSION' : 'USER',
+      resourceId: body.sessionId ?? body.userId ?? null,
+      ipAddress: getClientIp(req),
+      metadata: { revokedCount, ...body },
+    });
+
+    res.json({ data: { revokedCount } });
+  });
+
+  router.get('/users/:id/sessions', async (req, res) => {
+    const id = parse(idSchema, req.params.id);
+    const user = await ctx.users.findById(id);
+    if (!user) throw notFound('User not found');
+
+    const sessions = await ctx.sessions.listActiveForUser(id);
+    res.json({
+      data: sessions.map((s) => ({
+        id: s.id,
+        userId: s.user_id,
+        deviceId: s.device_id,
+        createdAt: s.created_at.toISOString(),
+        expiresAt: s.expires_at.toISOString(),
+        lastActivityAt: s.last_activity_at ? s.last_activity_at.toISOString() : null,
+        ipAddress: s.ip_address,
+        userAgent: s.user_agent,
+      })),
+    });
   });
 
   router.get('/devices', async (req, res) => {

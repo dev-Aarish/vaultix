@@ -14,6 +14,8 @@ export interface AppConfig {
   requireAdminApproval: boolean;
   deviceChallengeTtlMinutes: number;
   corsOrigins: string[];
+  rateLimitEnabled: boolean;
+  sessionInactivityMinutes: number;
   fileStorageDir: string;
   fileEncryptionKeyFile: string;
   fileEncryptionKek: string | null;
@@ -97,6 +99,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       .split(',')
       .map((origin) => origin.trim())
       .filter((origin) => origin.length > 0),
+    rateLimitEnabled: parseBoolean('RATE_LIMIT_ENABLED', env.RATE_LIMIT_ENABLED, nodeEnv !== 'test'),
+    sessionInactivityMinutes: parsePositiveInt(
+      'SESSION_INACTIVITY_MINUTES',
+      env.SESSION_INACTIVITY_MINUTES,
+      60,
+    ),
     fileStorageDir,
     fileEncryptionKeyFile,
     fileEncryptionKek: parseOptionalKey(env.FILE_ENCRYPTION_KEK),

@@ -1,8 +1,10 @@
 import type {
+  AuditEvent,
   Device,
   DeviceStatus,
   Invitation,
   Paginated,
+  Permission,
   Single,
   User,
   UserStatus,
@@ -93,6 +95,53 @@ export const api = {
       method: 'POST',
       token,
     });
+  },
+
+  disableUser(token: string, id: string) {
+    return request<Single<{ user: User }>>(`/admin/users/${id}/disable`, {
+      method: 'POST',
+      token,
+    });
+  },
+
+  revokeUserSessions(token: string, id: string) {
+    return request<Single<{ revokedSessions: number }>>(`/admin/users/${id}/sessions/revoke`, {
+      method: 'POST',
+      token,
+    });
+  },
+
+  revokeSessions(token: string, body: { userId?: string; sessionId?: string }) {
+    return request<Single<{ revokedCount: number }>>('/admin/sessions/revoke', {
+      method: 'POST',
+      token,
+      body,
+    });
+  },
+
+  listPermissions(token: string, status?: 'ACTIVE' | 'REVOKED') {
+    return request<Paginated<Permission>>(
+      `/admin/permissions${query({ status, limit: 100 })}`,
+      { token },
+    );
+  },
+
+  revokePermission(token: string, id: string) {
+    return request<Single<{ permission: Permission }>>(`/admin/permissions/${id}`, {
+      method: 'DELETE',
+      token,
+    });
+  },
+
+  listAuditEvents(token: string, filters?: { result?: 'SUCCESS' | 'DENIED'; eventType?: string; limit?: number }) {
+    return request<Paginated<AuditEvent>>(
+      `/admin/audit-events${query({
+        result: filters?.result,
+        eventType: filters?.eventType,
+        limit: filters?.limit ?? 50,
+      })}`,
+      { token },
+    );
   },
 
   listDevices(token: string, status?: DeviceStatus) {

@@ -50,19 +50,24 @@ class VaultixRepository(
     suspend fun devices(): Result<List<DeviceDto>> =
         authorized { authorization -> api.devices(authorization).data }
 
-    suspend fun registerDevice(deviceName: String): Result<DeviceDto> = authorized { authorization ->
-        val keyPair = deviceKeys.getOrCreateKeyPair()
-        val registered = api.registerDevice(
-            authorization,
-            DeviceRegisterRequest(deviceName, deviceKeys.publicKeyBase64(keyPair)),
-        )
-        val challenge = registered.data.challenge
-        val signature = deviceKeys.sign(challenge.challenge)
-        api.verify(
-            authorization,
-            VerifyRequest(registered.data.device.id, challenge.id, signature),
-        ).data.device
-    }
+    suspend fun registerDevice(deviceName: String, attestationStatus: String? = null): Result<DeviceDto> =
+        authorized { authorization ->
+            val keyPair = deviceKeys.getOrCreateKeyPair()
+            val registered = api.registerDevice(
+                authorization,
+                DeviceRegisterRequest(
+                    deviceName = deviceName,
+                    publicKey = deviceKeys.publicKeyBase64(keyPair),
+                    attestationStatus = attestationStatus,
+                ),
+            )
+            val challenge = registered.data.challenge
+            val signature = deviceKeys.sign(challenge.challenge)
+            api.verify(
+                authorization,
+                VerifyRequest(registered.data.device.id, challenge.id, signature),
+            ).data.device
+        }
 
     suspend fun bindSession(deviceId: String): Result<DeviceDto> = authorized { authorization ->
         val challenge = api.challenge(

@@ -3,6 +3,7 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 import type { AppContext } from './context';
 import { errorHandler, notFoundHandler, requestLogger } from './middleware/error-handler';
+import { createRateLimiter } from './middleware/rate-limit';
 import { adminFilesRouter } from './routes/admin-files';
 import { adminPermissionsRouter } from './routes/admin-permissions';
 import { adminRouter } from './routes/admin';
@@ -31,6 +32,13 @@ export function createApp(ctx: AppContext): Express {
     }),
   );
   app.use(express.json({ limit: '100kb' }));
+  app.use(
+    createRateLimiter(ctx, {
+      windowMs: 60_000,
+      max: 120,
+      recordAudit: false,
+    }),
+  );
 
   app.use('/health', healthRouter(ctx));
   app.use('/auth', authRouter(ctx));

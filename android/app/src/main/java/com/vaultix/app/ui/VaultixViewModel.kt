@@ -14,6 +14,7 @@ import com.vaultix.app.data.SessionStore
 import com.vaultix.app.data.VaultixRepository
 import com.vaultix.app.data.ViewSessionData
 import com.vaultix.app.security.DeviceKeyManager
+import com.vaultix.app.security.DeviceSecurityChecker
 import com.vaultix.app.viewer.PdfDocumentManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,6 +49,7 @@ data class AppUiState(
     val reauthBusy: Boolean = false,
     val reauthError: String? = null,
     val busy: Boolean = false,
+    val securityWarnings: List<String> = emptyList(),
     val error: String? = null,
     val info: String? = null,
 )
@@ -70,6 +72,10 @@ class VaultixViewModel(application: Application) : AndroidViewModel(application)
     val state: StateFlow<AppUiState> = _state.asStateFlow()
 
     init {
+        val assessment = DeviceSecurityChecker.assessSecurity(application)
+        if (assessment.warnings.isNotEmpty()) {
+            _state.update { it.copy(securityWarnings = assessment.warnings) }
+        }
         restoreSession()
     }
 
@@ -203,17 +209,19 @@ class VaultixViewModel(application: Application) : AndroidViewModel(application)
     fun registerDevice() {
         viewModelScope.launch {
             _state.update { it.copy(busy = true, error = null, info = null) }
+            val assessment = DeviceSecurityChecker.assessSecurity(getApplication())
             val deviceName = listOf(Build.MANUFACTURER, Build.MODEL)
                 .filter { it.isNotBlank() }
                 .joinToString(" ")
                 .ifBlank { "Android device" }
-            repository.registerDevice(deviceName).fold(
+            repository.registerDevice(deviceName, assessment.attestationStatus).fold(
                 onSuccess = { device ->
                     _state.update {
                         it.copy(
                             devices = listOf(device),
                             busy = false,
                             stage = Stage.DEVICE_PENDING,
+                            securityWarnings = assessment.warnings,
                             info = "Device registered. Waiting for an administrator to approve it.",
                         )
                     }

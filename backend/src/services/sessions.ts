@@ -50,7 +50,21 @@ export class SessionService {
        WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > now()`,
       [hashToken(token)],
     );
-    return result.rows[0] ?? null;
+    const session = result.rows[0] ?? null;
+    if (!session) return null;
+
+    if (this.config.sessionInactivityMinutes > 0) {
+      const lastActivity = session.last_activity_at
+        ? new Date(session.last_activity_at).getTime()
+        : new Date(session.created_at).getTime();
+      const maxIdleMs = this.config.sessionInactivityMinutes * 60 * 1000;
+      if (Date.now() - lastActivity > maxIdleMs) {
+        await this.revoke(session.id);
+        return null;
+      }
+    }
+
+    return session;
   }
 
   async touch(sessionId: string): Promise<void> {

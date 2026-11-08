@@ -488,6 +488,21 @@ private fun HomeScreen(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+        if (state.securityWarnings.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Surface(
+                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = "Security Advisory: ${state.securityWarnings.first()}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                )
+            }
+        }
         Spacer(Modifier.height(14.dp))
         FileBrowserContent(
             state = state,
@@ -725,7 +740,7 @@ private fun DeviceCard(device: DeviceDto?, bound: Boolean) {
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    shortFingerprint(device.keyFingerprint),
+                    "${shortFingerprint(device.keyFingerprint)} · ${device.attestationStatus}",
                     fontFamily = FontFamily.Monospace,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

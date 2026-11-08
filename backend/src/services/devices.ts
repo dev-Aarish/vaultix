@@ -32,6 +32,7 @@ export interface CreateDeviceInput {
   deviceName: string;
   publicKeyPem: string;
   keyFingerprint: string;
+  attestationStatus?: DeviceAttestationStatus;
 }
 
 export interface DeviceFilters {
@@ -76,9 +77,16 @@ export class DeviceService {
     try {
       const result = await this.pool.query<DeviceRow>(
         `INSERT INTO devices (id, user_id, device_name, public_key, key_fingerprint, attestation_status, status)
-         VALUES ($1, $2, $3, $4, $5, 'UNVERIFIED', 'PENDING')
+         VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')
          RETURNING *`,
-        [randomUUID(), input.userId, input.deviceName, input.publicKeyPem, input.keyFingerprint],
+        [
+          randomUUID(),
+          input.userId,
+          input.deviceName,
+          input.publicKeyPem,
+          input.keyFingerprint,
+          input.attestationStatus ?? 'UNVERIFIED',
+        ],
       );
       const device = result.rows[0];
       if (!device) throw new Error('Failed to create device');

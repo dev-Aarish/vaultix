@@ -40,7 +40,11 @@ data class MeResponse(val data: MeData)
 
 data class DevicesResponse(val data: List<DeviceDto>)
 
-data class DeviceRegisterRequest(val deviceName: String, val publicKey: String)
+data class DeviceRegisterRequest(
+    val deviceName: String,
+    val publicKey: String,
+    val attestationStatus: String? = null,
+)
 data class ChallengeDto(
     val id: String = "",
     val challenge: String = "",

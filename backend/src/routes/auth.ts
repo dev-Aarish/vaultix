@@ -5,6 +5,7 @@ import { AppError, badRequest, conflict, unauthenticated } from '../lib/errors';
 import { burnPasswordVerification, hashPassword, verifyPassword } from '../lib/password';
 import { hashToken } from '../lib/tokens';
 import { getAuth, requireAuth } from '../middleware/auth';
+import { createRateLimiter } from '../middleware/rate-limit';
 import { getClientIp, parseBody } from '../middleware/validate';
 import { toPublicDevice } from '../services/devices';
 import { toPublicUser } from '../services/users';
@@ -70,7 +71,14 @@ export function authRouter(ctx: AppContext): Router {
     res.status(201).json({ data: { user: toPublicUser(result.user) } });
   });
 
-  router.post('/login', async (req, res) => {
+  const loginLimiter = createRateLimiter(ctx, {
+    windowMs: 60_000,
+    max: 10,
+    recordAudit: true,
+    message: 'Too many login attempts. Please wait before trying again.',
+  });
+
+  router.post('/login', loginLimiter, async (req, res) => {
     const body = parseBody(loginSchema, req);
     const ipAddress = getClientIp(req);
     const user = await ctx.users.findByEmail(body.email);

@@ -4,12 +4,14 @@ import type { AppContext } from '../context';
 import { AppError, badRequest, conflict, notFound } from '../lib/errors';
 import { parseDevicePublicKey, verifyDeviceSignature } from '../lib/device-keys';
 import { requireAuth } from '../middleware/auth';
+import { createRateLimiter } from '../middleware/rate-limit';
 import { getClientIp, parse, parseBody } from '../middleware/validate';
 import { toPublicDevice } from '../services/devices';
 
 const registerSchema = z.strictObject({
   deviceName: z.string().trim().min(1).max(200),
   publicKey: z.string().min(1).max(4096),
+  attestationStatus: z.enum(['VERIFIED', 'UNVERIFIED', 'FAILED', 'NOT_SUPPORTED']).optional(),
 });
 
 const challengeSchema = z.strictObject({
@@ -40,6 +42,7 @@ export function deviceRouter(ctx: AppContext): Router {
       deviceName: body.deviceName,
       publicKeyPem: key.pem,
       keyFingerprint: key.fingerprint,
+      attestationStatus: body.attestationStatus,
     });
 
     const challenge = await ctx.devices.createChallenge(
@@ -72,7 +75,14 @@ export function deviceRouter(ctx: AppContext): Router {
     });
   });
 
-  router.post('/challenge', async (req, res) => {
+  const challengeLimiter = createRateLimiter(ctx, {
+    windowMs: 60_000,
+    max: 20,
+    recordAudit: true,
+    message: 'Too many device verification attempts. Please wait before trying again.',
+  });
+
+  router.post('/challenge', challengeLimiter, async (req, res) => {
     const body = parseBody(challengeSchema, req);
     const auth = req.auth;
     if (!auth) throw notFound('Session not found');
@@ -104,7 +114,7 @@ export function deviceRouter(ctx: AppContext): Router {
     });
   });
 
-  router.post('/verify', async (req, res) => {
+  router.post('/verify', challengeLimiter, async (req, res) => {
     const body = parseBody(verifySchema, req);
     const auth = req.auth;
     if (!auth) throw notFound('Session not found');

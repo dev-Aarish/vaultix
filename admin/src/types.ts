@@ -40,6 +40,35 @@ export interface Invitation {
   createdAt: string;
 }
 
+export interface AuditEvent {
+  id: string;
+  actorUserId: string | null;
+  deviceId: string | null;
+  eventType: string;
+  resourceType: string | null;
+  resourceId: string | null;
+  result: 'SUCCESS' | 'DENIED';
+  reasonCode: string | null;
+  ipAddress: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface Permission {
+  id: string;
+  subjectType: 'USER' | 'DEVICE';
+  subjectId: string;
+  resourceType: 'FILE' | 'FOLDER';
+  resourceId: string;
+  actions: string[];
+  deviceIds: string[] | null;
+  expiresAt: string | null;
+  status: 'ACTIVE' | 'REVOKED';
+  createdBy: string;
+  createdAt: string;
+  revokedAt: string | null;
+}
+
 export interface Paginated<T> {
   data: T[];
   pagination: { total: number; limit: number; offset: number };

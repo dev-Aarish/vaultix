@@ -509,6 +509,57 @@ tbody tr:hover {
   background: var(--danger-container);
 }
 
+.badge.status-active,
+.badge.result-success {
+  color: var(--on-secondary-container);
+  background: var(--secondary-container);
+}
+
+.badge.status-suspended {
+  color: var(--on-warn-container);
+  background: var(--warn-container);
+}
+
+.badge.status-disabled,
+.badge.result-denied {
+  color: var(--on-danger-container);
+  background: var(--danger-container);
+}
+
+/* Navigation Tabs (Stock Android M3) */
+.nav-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--line);
+  padding: 0 0 0.85rem 0;
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+}
+
+.nav-tab {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 500;
+  padding: 0.45rem 1.15rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  white-space: nowrap;
+}
+
+.nav-tab:hover:not(.active) {
+  background: var(--surface-low);
+  color: var(--text);
+}
+
+.nav-tab.active {
+  background: var(--accent-container);
+  color: var(--on-accent-container);
+  font-weight: 600;
+}
+
 /* Inline Invitation Form */
 .inline-form {
   display: flex;
