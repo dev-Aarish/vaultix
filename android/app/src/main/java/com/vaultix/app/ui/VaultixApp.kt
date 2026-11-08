@@ -1,7 +1,5 @@
 package com.vaultix.app.ui
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,8 +10,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -21,6 +17,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vaultix.app.data.DeviceDto
 import kotlinx.coroutines.delay
@@ -38,18 +35,9 @@ fun VaultixApp(viewModel: VaultixViewModel) {
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.background,
-                        Color(0xFF0B121A),
-                        MaterialTheme.colorScheme.background,
-                    ),
-                ),
-            ),
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
     ) {
         CompositionLocalProvider(
             LocalContentColor provides MaterialTheme.colorScheme.onBackground,
@@ -93,7 +81,7 @@ fun VaultixApp(viewModel: VaultixViewModel) {
 @Composable
 private fun LoadingScreen() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -126,11 +114,14 @@ private fun LoginScreen(
             isPassword = true,
             enabled = !state.busy,
         )
+        Spacer(Modifier.height(4.dp))
         Button(
             onClick = { onLogin(email, password) },
             enabled = !state.busy && email.isNotBlank() && password.isNotBlank(),
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = ButtonDefaults.shape,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
         ) {
             if (state.busy) {
                 CircularProgressIndicator(
@@ -139,12 +130,27 @@ private fun LoginScreen(
                     color = MaterialTheme.colorScheme.onPrimary,
                 )
             } else {
-                Text("Sign in")
+                Text(
+                    "Sign in",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Medium,
+                )
             }
         }
-        Spacer(Modifier.height(8.dp))
-        TextButton(onClick = onShowRegister, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
-            Text("I have an invitation")
+        Spacer(Modifier.height(12.dp))
+        FilledTonalButton(
+            onClick = onShowRegister,
+            enabled = !state.busy,
+            shape = ButtonDefaults.shape,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+        ) {
+            Text(
+                "I have an invitation",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Medium,
+            )
         }
     }
 }
@@ -184,14 +190,17 @@ private fun RegisterScreen(
             isPassword = true,
             enabled = !state.busy,
         )
+        Spacer(Modifier.height(4.dp))
         Button(
             onClick = { onRegister(token, name, password) },
             enabled = !state.busy &&
                 token.isNotBlank() &&
                 name.isNotBlank() &&
                 password.length >= 12,
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = ButtonDefaults.shape,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
         ) {
             if (state.busy) {
                 CircularProgressIndicator(
@@ -200,12 +209,27 @@ private fun RegisterScreen(
                     color = MaterialTheme.colorScheme.onPrimary,
                 )
             } else {
-                Text("Create account")
+                Text(
+                    "Create account",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Medium,
+                )
             }
         }
-        Spacer(Modifier.height(8.dp))
-        TextButton(onClick = onShowLogin, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
-            Text("Back to sign in")
+        Spacer(Modifier.height(12.dp))
+        FilledTonalButton(
+            onClick = onShowLogin,
+            enabled = !state.busy,
+            shape = ButtonDefaults.shape,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+        ) {
+            Text(
+                "Back to sign in",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Medium,
+            )
         }
     }
 }
@@ -224,8 +248,10 @@ private fun DeviceSetupScreen(
         Button(
             onClick = onRegisterDevice,
             enabled = !state.busy,
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = ButtonDefaults.shape,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
         ) {
             if (state.busy) {
                 CircularProgressIndicator(
@@ -234,12 +260,27 @@ private fun DeviceSetupScreen(
                     color = MaterialTheme.colorScheme.onPrimary,
                 )
             } else {
-                Text("Register this device")
+                Text(
+                    "Register this device",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Medium,
+                )
             }
         }
-        Spacer(Modifier.height(8.dp))
-        TextButton(onClick = onLogout, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
-            Text("Sign out")
+        Spacer(Modifier.height(12.dp))
+        FilledTonalButton(
+            onClick = onLogout,
+            enabled = !state.busy,
+            shape = ButtonDefaults.shape,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+        ) {
+            Text(
+                "Sign out",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Medium,
+            )
         }
     }
 }
@@ -252,34 +293,59 @@ private fun DevicePendingScreen(
 ) {
     ScreenFrame {
         BrandMark()
-        Spacer(Modifier.height(24.dp))
-        StatusPill("PENDING APPROVAL", MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(28.dp))
+        StatusPill(
+            label = "PENDING APPROVAL",
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+        Spacer(Modifier.height(16.dp))
         Text(
-            "This device is waiting for approval",
+            "Waiting for approval",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(Modifier.height(8.dp))
         Text(
             "An administrator needs to review and approve this device. This screen checks automatically every few seconds.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
         )
         Spacer(Modifier.height(20.dp))
         MessageBanner(state.error, state.info)
         DeviceCard(state.devices.firstOrNull(), bound = false)
-        Spacer(Modifier.height(16.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Spacer(Modifier.height(20.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Button(
                 onClick = onRefresh,
                 enabled = !state.busy,
-                shape = RoundedCornerShape(14.dp),
+                shape = ButtonDefaults.shape,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
             ) {
-                Text("Check status")
+                Text(
+                    "Check status",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Medium,
+                )
             }
-            Spacer(Modifier.width(8.dp))
-            TextButton(onClick = onLogout, enabled = !state.busy) {
-                Text("Sign out")
+            FilledTonalButton(
+                onClick = onLogout,
+                enabled = !state.busy,
+                shape = ButtonDefaults.shape,
+                modifier = Modifier.height(48.dp),
+            ) {
+                Text(
+                    "Sign out",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Medium,
+                )
             }
         }
     }
@@ -289,26 +355,41 @@ private fun DevicePendingScreen(
 private fun DeviceActivatingScreen(state: AppUiState, onLogout: () -> Unit) {
     ScreenFrame {
         BrandMark()
-        Spacer(Modifier.height(28.dp))
-        CircularProgressIndicator()
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(32.dp))
+        CircularProgressIndicator(
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(48.dp),
+            strokeWidth = 3.dp,
+        )
+        Spacer(Modifier.height(20.dp))
         Text(
             "Activating secure session",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(Modifier.height(8.dp))
         Text(
             "Signing a fresh challenge with this device's key.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
         )
         if (state.error != null) {
             Spacer(Modifier.height(16.dp))
             MessageBanner(state.error, state.info)
         }
-        Spacer(Modifier.height(16.dp))
-        TextButton(onClick = onLogout, enabled = !state.busy) {
-            Text("Sign out")
+        Spacer(Modifier.height(24.dp))
+        FilledTonalButton(
+            onClick = onLogout,
+            enabled = !state.busy,
+            shape = ButtonDefaults.shape,
+            modifier = Modifier.height(48.dp),
+        ) {
+            Text(
+                "Sign out",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Medium,
+            )
         }
     }
 }
@@ -322,29 +403,46 @@ private fun HomeScreen(state: AppUiState, onLogout: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             BrandMark()
-            TextButton(onClick = onLogout, enabled = !state.busy) {
-                Text("Sign out")
+            FilledTonalButton(
+                onClick = onLogout,
+                enabled = !state.busy,
+                shape = ButtonDefaults.shape,
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    "Sign out",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                )
             }
         }
         Spacer(Modifier.height(28.dp))
-        StatusPill("SECURE SESSION", MaterialTheme.colorScheme.secondary)
-        Spacer(Modifier.height(14.dp))
+        StatusPill(
+            label = "SECURE SESSION",
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+        Spacer(Modifier.height(16.dp))
         Text(
             "You're signed in",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(Modifier.height(8.dp))
         Text(
             "Your account and this device are verified. File sharing arrives in the next phase.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
         )
         Spacer(Modifier.height(24.dp))
         Panel {
             Text(
-                "Account",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                "ACCOUNT",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+                color = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.height(8.dp))
             Text(
@@ -353,16 +451,22 @@ private fun HomeScreen(state: AppUiState, onLogout: () -> Unit) {
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
+            Spacer(Modifier.height(2.dp))
             Text(
                 state.user?.email.orEmpty(),
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (state.user?.role == "ADMIN") {
-                Spacer(Modifier.height(10.dp))
-                StatusPill("ADMIN", MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.height(12.dp))
+                StatusPill(
+                    label = "ADMIN",
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                )
             }
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
         DeviceCard(state.boundDevice, bound = true)
     }
 }
@@ -371,29 +475,41 @@ private fun HomeScreen(state: AppUiState, onLogout: () -> Unit) {
 private fun DeviceRevokedScreen(state: AppUiState, onLogout: () -> Unit) {
     ScreenFrame {
         BrandMark()
-        Spacer(Modifier.height(24.dp))
-        StatusPill("REVOKED", MaterialTheme.colorScheme.error)
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(28.dp))
+        StatusPill(
+            label = "REVOKED",
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        )
+        Spacer(Modifier.height(16.dp))
         Text(
             "Device access revoked",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(Modifier.height(8.dp))
         Text(
             "An administrator revoked this device. Sign in on a new device or contact your administrator.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
         )
         Spacer(Modifier.height(20.dp))
         DeviceCard(state.devices.firstOrNull(), bound = false)
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(24.dp))
         Button(
             onClick = onLogout,
             enabled = !state.busy,
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = ButtonDefaults.shape,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
         ) {
-            Text("Sign out")
+            Text(
+                "Sign out",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Medium,
+            )
         }
     }
 }
@@ -406,14 +522,19 @@ private fun AuthScaffold(
 ) {
     ScreenFrame {
         BrandMark()
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(32.dp))
         Text(
             title,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(Modifier.height(8.dp))
-        Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            subtitle,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
+        )
         Spacer(Modifier.height(24.dp))
         content()
     }
@@ -442,23 +563,19 @@ private fun ScreenFrame(content: @Composable ColumnScope.() -> Unit) {
 @Composable
 private fun BrandMark() {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(
-                    Brush.linearGradient(
-                        listOf(Color(0xFF4F9DFF), Color(0xFF3DDC97)),
-                    ),
-                ),
-            contentAlignment = Alignment.Center,
+        Surface(
+            modifier = Modifier.size(42.dp),
+            shape = RoundedCornerShape(14.dp),
+            color = MaterialTheme.colorScheme.primaryContainer,
         ) {
-            Text(
-                "V",
-                color = Color(0xFF04101F),
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleLarge,
-            )
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    "V",
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleLarge,
+                )
+            }
         }
         Spacer(Modifier.width(12.dp))
         Text(
@@ -491,41 +608,58 @@ private fun Field(
             VisualTransformation.None
         },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+            focusedLabelColor = MaterialTheme.colorScheme.primary,
+            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            cursorColor = MaterialTheme.colorScheme.primary,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+        ),
         modifier = Modifier.fillMaxWidth(),
     )
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(14.dp))
 }
 
 @Composable
 private fun MessageBanner(error: String?, info: String?) {
     val message = error ?: info ?: return
     val isError = error != null
+    val containerColor = if (isError) {
+        MaterialTheme.colorScheme.errorContainer
+    } else {
+        MaterialTheme.colorScheme.secondaryContainer
+    }
+    val contentColor = if (isError) {
+        MaterialTheme.colorScheme.onErrorContainer
+    } else {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    }
+
     Surface(
-        color = if (isError) Color(0xFF2A1215) else Color(0xFF10231B),
-        shape = RoundedCornerShape(12.dp),
+        color = containerColor,
+        shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(
             text = message,
-            modifier = Modifier.padding(14.dp),
-            color = if (isError) {
-                MaterialTheme.colorScheme.error
-            } else {
-                MaterialTheme.colorScheme.secondary
-            },
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            color = contentColor,
             style = MaterialTheme.typography.bodyMedium,
         )
     }
-    Spacer(Modifier.height(14.dp))
+    Spacer(Modifier.height(16.dp))
 }
 
 @Composable
 private fun Panel(content: @Composable ColumnScope.() -> Unit) {
     Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(24.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(20.dp), content = content)
@@ -558,30 +692,37 @@ private fun DeviceCard(device: DeviceDto?, bound: Boolean) {
             }
             Spacer(Modifier.width(12.dp))
             val approved = device.status == "APPROVED"
+            val (containerColor, contentColor) = if (approved || bound) {
+                MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
+            } else {
+                MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+            }
             StatusPill(
                 label = if (bound) "BOUND" else device.status,
-                color = if (approved || bound) {
-                    MaterialTheme.colorScheme.secondary
-                } else {
-                    MaterialTheme.colorScheme.primary
-                },
+                containerColor = containerColor,
+                contentColor = contentColor,
             )
         }
     }
 }
 
 @Composable
-private fun StatusPill(label: String, color: Color) {
+private fun StatusPill(
+    label: String,
+    containerColor: Color,
+    contentColor: Color,
+) {
     Surface(
-        color = color.copy(alpha = 0.16f),
-        shape = RoundedCornerShape(50),
+        color = containerColor,
+        shape = RoundedCornerShape(100),
     ) {
         Text(
             text = label,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-            color = color,
-            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+            color = contentColor,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
+            letterSpacing = 0.8.sp,
         )
     }
 }
